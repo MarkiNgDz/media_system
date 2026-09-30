@@ -1,0 +1,175 @@
+---
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./jellyfin/library:/config
+      - C:/Users/Administration/Music/OTS:/data/ssd/music
+      - C:/Users/Administration/Videos/movie:/data/ssd/movie
+      - C:/Users/Administration/Videos/tv:/data/ssd/tv
+      - C:/Users/Administration/Videos/av:/data/ssd/av
+      - D:/anime:/data/hdd/anime
+      - D:/tv:/data/hdd/tv
+      - D:/movie:/data/hdd/movie
+    ports:
+      - 8096:8096
+      - 8920:8920
+      - 7359:7359/udp
+      - 1900:1900/udp
+    restart: unless-stopped
+
+  metatube:
+    image: ghcr.io/metatube-community/metatube-server:latest
+    container_name: metatube
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+    volumes:
+      - metatube-data:/var/run
+    command: -dsn "postgres://metatube:metatube@/metatube?host=/var/run/postgresql" -port 8080 -db-auto-migrate -db-prepared-stmt
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: metatube-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=metatube
+      - POSTGRES_PASSWORD=metatube
+      - POSTGRES_DB=metatube
+    volumes:
+      - metatube-postgres-data:/var/lib/postgresql/data
+      - metatube-data:/var/run
+    command: "-c TimeZone=Asia/Shanghai -c log_timezone=Asia/Shanghai -c listen_addresses='' -c unix_socket_permissions=0777"
+
+  danmu-api:
+    image: logvar/danmu-api:latest
+    container_name: danmu-api
+    ports:
+      - "9321:9321"
+    volumes:
+      - ./danmu-api/config:/app/config
+      - ./danmu-api/.cache:/app/.cache
+    restart: unless-stopped
+
+  watchtower:
+    image: nickfedor/watchtower
+    container_name: watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=Asia/Shanghai
+    command:
+      - --cleanup
+      - --interval
+      - "12600"
+      - danmu-api
+
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    init: true
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=Asia/Shanghai
+    ports:
+      - 5055:5055
+    volumes:
+      - media_system_seerr-data:/app/config
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
+      start_period: 20s
+      timeout: 3s
+      interval: 15s
+      retries: 3
+    security_opt:
+      - no-new-privileges
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./radarr/data:/config
+      - D:/movie:/data/hdd/movie
+      - C:/Users/Administration/Videos/movie:/data/ssd/movie
+      - C:/Users/Administration/Downloads:/downloads
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./prowlarr/data:/config
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+
+  Aria2-Pro:
+    image: p3terx/aria2-pro
+    container_name: aria2-pro
+    environment:
+      - PUID=65534
+      - PGID=65534
+      - UMASK_SET=022
+      - RPC_SECRET=${ARIA2_SECRET}
+      - RPC_PORT=6800
+      - LISTEN_PORT=6888
+      - DISK_CACHE=64M
+      - IPV6_MODE=false
+      - UPDATE_TRACKERS=true
+      - CUSTOM_TRACKER_URL=https://raw.githubusercontent.com/adysec/tracker/main/trackers_best.txt
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./aria2/aria2-config:/config
+      - C:/Users/Administration/Downloads:/downloads
+    network_mode: bridge
+    ports:
+      - 6800:6800
+      - 6888:6888
+      - 6888:6888/udp
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+
+  AriaNg:
+    image: p3terx/ariang
+    container_name: ariang
+    command: --port 6880 --ipv6
+    network_mode: bridge
+    ports:
+      - 6880:6880
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 1m
+
+volumes:
+  metatube-data:
+  metatube-postgres-data:
+  media_system_seerr-data:
