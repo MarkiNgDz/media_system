@@ -9,13 +9,13 @@ services:
       - TZ=Asia/Shanghai
     volumes:
       - ./jellyfin/library:/config
-      - C:/Users/Administration/Music/OTS:/data/ssd/music
-      - C:/Users/Administration/Videos/movie:/data/ssd/movie
-      - C:/Users/Administration/Videos/tv:/data/ssd/tv
-      - C:/Users/Administration/Videos/av:/data/ssd/av
-      - D:/anime:/data/hdd/anime
-      - D:/tv:/data/hdd/tv
-      - D:/movie:/data/hdd/movie
+      - ${SSD_MUSIC_PATH}:/data/ssd/music
+      - ${SSD_MOVIE_PATH}:/data/ssd/movie
+      - ${SSD_TV_PATH}:/data/ssd/tv
+      - ${SSD_AV_PATH}:/data/ssd/av
+      - ${HDD_ANIME_PATH}:/data/hdd/anime
+      - ${HDD_TV_PATH}:/data/hdd/tv
+      - ${HDD_MOVIE_PATH}:/data/hdd/movie
     ports:
       - 8096:8096
       - 8920:8920
@@ -43,9 +43,9 @@ services:
     container_name: metatube-postgres
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=metatube
-      - POSTGRES_PASSWORD=metatube
-      - POSTGRES_DB=metatube
+      - POSTGRES_USER=${STGRES_USER}
+      - POSTGRES_PASSWORD=${STGRES_PASSWORD}
+      - POSTGRES_DB=${STGRES_DB}
     volumes:
       - metatube-postgres-data:/var/lib/postgresql/data
       - metatube-data:/var/run
@@ -107,9 +107,9 @@ services:
       - TZ=Asia/Shanghai
     volumes:
       - ./radarr/data:/config
-      - D:/movie:/data/hdd/movie
-      - C:/Users/Administration/Videos/movie:/data/ssd/movie
-      - C:/Users/Administration/Downloads:/downloads
+      - ${HDD_MOVIE_PATH}:/data/hdd/movie
+      - ${SSD_MOVIE_PATH}:/data/ssd/movie
+      - ${DOWNLOAD_PATH}:/downloads
     ports:
       - 7878:7878
     restart: unless-stopped
@@ -140,11 +140,10 @@ services:
       - DISK_CACHE=64M
       - IPV6_MODE=false
       - UPDATE_TRACKERS=true
-      - CUSTOM_TRACKER_URL=https://raw.githubusercontent.com/adysec/tracker/main/trackers_best.txt
-      - TZ=Asia/Shanghai
+      - CUSTOM_TRACKER_URL=${TRACKER_URL}
     volumes:
       - ./aria2/aria2-config:/config
-      - C:/Users/Administration/Downloads:/downloads
+      - ${DOWNLOAD_PATH}:/downloads
     network_mode: bridge
     ports:
       - 6800:6800
@@ -168,6 +167,25 @@ services:
       driver: json-file
       options:
         max-size: 1m
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./bazarr/config:/config
+      - ${SSD_MOVIE_PATH}:/data/ssd/movie
+      - ${SSD_TV_PATH}:/data/ssd/tv
+      - ${SSD_AV_PATH}:/data/ssd/av
+      - ${HDD_ANIME_PATH}:/data/hdd/anime
+      - ${HDD_TV_PATH}:/data/hdd/tv
+      - ${HDD_MOVIE_PATH}:/data/hdd/movie
+    ports:
+      - 6767:6767
+    restart: unless-stopped
 
 volumes:
   metatube-data:
