@@ -187,6 +187,24 @@ services:
       - 6767:6767
     restart: unless-stopped
 
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./sonarr/data:/config
+      - ${DOWNLOAD_PATH}:/downloads
+      - ${SSD_TV_PATH}:/data/ssd/tv
+      - ${HDD_ANIME_PATH}:/data/hdd/anime
+      - ${HDD_TV_PATH}:/data/hdd/tv
+
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+
 volumes:
   metatube-data:
   metatube-postgres-data:
