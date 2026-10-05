@@ -2,3 +2,4 @@
 !/docker-compose.yml
 !/.gitignore
 !/.env.example
+!/README.md
