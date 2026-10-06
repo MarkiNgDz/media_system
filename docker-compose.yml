@@ -8,11 +8,11 @@ services:
       - PGID=1000
       - TZ=Asia/Shanghai
     volumes:
-      - ./jellyfin/library:/config
+      - jellyfin-config:/config
       - ${SSD_MUSIC_PATH}:/data/ssd/music
       - ${SSD_MOVIE_PATH}:/data/ssd/movie
       - ${SSD_TV_PATH}:/data/ssd/tv
-      - ${SSD_AV_PATH}:/data/ssd/av
+      - ${SSD_JAV_PATH}:/data/ssd/av
       - ${HDD_ANIME_PATH}:/data/hdd/anime
       - ${HDD_TV_PATH}:/data/hdd/tv
       - ${HDD_MOVIE_PATH}:/data/hdd/movie
@@ -43,9 +43,9 @@ services:
     container_name: metatube-postgres
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${STGRES_USER}
-      - POSTGRES_PASSWORD=${STGRES_PASSWORD}
-      - POSTGRES_DB=${STGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - metatube-postgres-data:/var/lib/postgresql/data
       - metatube-data:/var/run
@@ -57,8 +57,8 @@ services:
     ports:
       - "9321:9321"
     volumes:
-      - ./danmu-api/config:/app/config
-      - ./danmu-api/.cache:/app/.cache
+      - danmu-api-config:/app/config
+      - danmu-api-cache:/app/.cache
     restart: unless-stopped
 
   watchtower:
@@ -85,7 +85,7 @@ services:
     ports:
       - 5055:5055
     volumes:
-      - media_system_seerr-data:/app/config
+      - seerr-config:/app/config
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
       start_period: 20s
@@ -106,7 +106,7 @@ services:
       - PGID=1000
       - TZ=Asia/Shanghai
     volumes:
-      - ./radarr/data:/config
+      - radarr-config:/config
       - ${HDD_MOVIE_PATH}:/data/hdd/movie
       - ${SSD_MOVIE_PATH}:/data/ssd/movie
       - ${DOWNLOAD_PATH}:/downloads
@@ -122,7 +122,7 @@ services:
       - PGID=1000
       - TZ=Asia/Shanghai
     volumes:
-      - ./prowlarr/data:/config
+      - prowlarr-config:/config
     ports:
       - 9696:9696
     restart: unless-stopped
@@ -142,7 +142,7 @@ services:
       - UPDATE_TRACKERS=true
       - CUSTOM_TRACKER_URL=${TRACKER_URL}
     volumes:
-      - ./aria2/aria2-config:/config
+      - aria2-config:/config
       - ${DOWNLOAD_PATH}:/downloads
     network_mode: bridge
     ports:
@@ -176,10 +176,10 @@ services:
       - PGID=1000
       - TZ=Asia/Shanghai
     volumes:
-      - ./bazarr/config:/config
+      - bazarr-config:/config
       - ${SSD_MOVIE_PATH}:/data/ssd/movie
       - ${SSD_TV_PATH}:/data/ssd/tv
-      - ${SSD_AV_PATH}:/data/ssd/av
+      - ${SSD_JAV_PATH}:/data/ssd/av
       - ${HDD_ANIME_PATH}:/data/hdd/anime
       - ${HDD_TV_PATH}:/data/hdd/tv
       - ${HDD_MOVIE_PATH}:/data/hdd/movie
@@ -195,7 +195,7 @@ services:
       - PGID=1000
       - TZ=Asia/Shanghai
     volumes:
-      - ./sonarr/data:/config
+      - sonarr-config:/config
       - ${SSD_TV_PATH}:/data/ssd/tv
       - ${HDD_ANIME_PATH}:/data/hdd/anime
       - ${HDD_TV_PATH}:/data/hdd/tv
@@ -205,6 +205,14 @@ services:
     restart: unless-stopped
 
 volumes:
+  jellyfin-config:
   metatube-data:
   metatube-postgres-data:
-  media_system_seerr-data:
+  danmu-api-config:
+  danmu-api-cache:
+  seerr-config:
+  radarr-config:
+  prowlarr-config:
+  aria2-config:
+  bazarr-config:
+  sonarr-config:
