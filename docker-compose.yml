@@ -32,8 +32,9 @@ services:
     depends_on:
       - postgres
     environment:
-      - HTTP_PROXY=
-      - HTTPS_PROXY=
+      - TZ=Asia/Shanghai
+      - HTTP_PROXY=${METATUBE_HTTP_PROXY}
+      - HTTPS_PROXY=${METATUBE_HTTPS_PROXY}
     volumes:
       - metatube-data:/var/run
     command: -dsn "postgres://metatube:metatube@/metatube?host=/var/run/postgresql" -port 8080 -db-auto-migrate -db-prepared-stmt
