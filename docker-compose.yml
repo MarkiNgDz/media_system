@@ -76,29 +76,6 @@ services:
       - "12600"
       - danmu-api
 
-  seerr:
-    image: ghcr.io/seerr-team/seerr:latest
-    container_name: seerr
-    init: true
-    environment:
-      - LOG_LEVEL=debug
-      - TZ=Asia/Shanghai
-    ports:
-      - 5055:5055
-    volumes:
-      - seerr-config:/app/config
-    healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
-      start_period: 20s
-      timeout: 3s
-      interval: 15s
-      retries: 3
-    security_opt:
-      - no-new-privileges
-    cap_drop:
-      - ALL
-    restart: unless-stopped
-
   radarr:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
@@ -127,47 +104,6 @@ services:
     ports:
       - 9696:9696
     restart: unless-stopped
-
-  Aria2-Pro:
-    image: p3terx/aria2-pro
-    container_name: aria2-pro
-    environment:
-      - PUID=65534
-      - PGID=65534
-      - UMASK_SET=022
-      - RPC_SECRET=${ARIA2_SECRET}
-      - RPC_PORT=6800
-      - LISTEN_PORT=6888
-      - DISK_CACHE=64M
-      - IPV6_MODE=false
-      - UPDATE_TRACKERS=true
-      - CUSTOM_TRACKER_URL=${TRACKER_URL}
-    volumes:
-      - aria2-config:/config
-      - ${DOWNLOAD_PATH}:/downloads
-    network_mode: bridge
-    ports:
-      - 6800:6800
-      - 6888:6888
-      - 6888:6888/udp
-    restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: 1m
-
-  AriaNg:
-    image: p3terx/ariang
-    container_name: ariang
-    command: --port 6880 --ipv6
-    network_mode: bridge
-    ports:
-      - 6880:6880
-    restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: 1m
 
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
@@ -205,15 +141,45 @@ services:
       - 8989:8989
     restart: unless-stopped
 
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTURE_SOLVER=${CAPTURE_SOLVER:-none}
+      - TZ=Asia/Shanghai
+    ports:
+      - "${PORT:-8191}:8191"
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Shanghai
+      - WEBUI_PORT=8081
+      - TORRENTING_PORT=6881
+    volumes:
+      - qbittorrent-config:/config
+      - ${DOWNLOAD_PATH}:/downloads
+    ports:
+      - 8081:8081
+      - 6881:6881
+      - 6881:6881/udp
+    stop_grace_period: "10s"
+    restart: unless-stopped
+
 volumes:
   jellyfin-config:
   metatube-data:
   metatube-postgres-data:
   danmu-api-config:
   danmu-api-cache:
-  seerr-config:
   radarr-config:
   prowlarr-config:
-  aria2-config:
   bazarr-config:
   sonarr-config:
+  qbittorrent-config:

@@ -1,27 +1,28 @@
 # Media System
 
-基于 Docker Compose 的自托管媒体服务栈，包含媒体播放、媒体请求、影视管理、下载、索引器管理、字幕、弹幕和元数据服务。服务定义见 [`docker-compose.yml`](./docker-compose.yml)。
+基于 Docker Compose 的自托管媒体服务栈，包含媒体播放、影视管理、索引器、字幕、下载、弹幕和元数据服务。服务定义见 [`docker-compose.yml`](./docker-compose.yml)。
 
 ## 服务组成
 
 | 服务 | 用途 | Web 访问地址 |
 | --- | --- | --- |
 | Jellyfin | 媒体库管理与播放 | `http://<主机地址>:8096` |
-| Seerr | 媒体请求管理 | `http://<主机地址>:5055` |
+| MetaTube | 元数据服务 | `http://<主机地址>:8080` |
+| danmu-api | 弹幕 API | `http://<主机地址>:9321` |
 | Radarr | 电影管理 | `http://<主机地址>:7878` |
 | Sonarr | 电视剧及动画管理 | `http://<主机地址>:8989` |
 | Prowlarr | 索引器管理 | `http://<主机地址>:9696` |
 | Bazarr | 电影和电视剧字幕管理 | `http://<主机地址>:6767` |
-| AriaNg | Aria2 Web 管理界面 | `http://<主机地址>:6880` |
-| Aria2-Pro | 下载服务及 RPC 接口 | RPC：`http://<主机地址>:6800` |
-| danmu-api | 弹幕 API | `http://<主机地址>:9321` |
-| MetaTube | 元数据服务 | `http://<主机地址>:8080` |
+| qBittorrent | 下载及 Web 管理界面 | `http://<主机地址>:8081` |
+| FlareSolverr | 为索引器提供反爬虫代理服务 | `http://<主机地址>:8191` |
 | PostgreSQL | MetaTube 数据库 | 不发布主机端口 |
 | Watchtower | 定时检查并更新容器镜像 | 无 Web 界面 |
 
-Jellyfin 还发布 `8920/tcp`、`7359/udp` 和 `1900/udp`，用于 HTTPS 及客户端发现等功能。Aria2-Pro 还发布 `6888/tcp` 和 `6888/udp`，用于 BitTorrent 连接。
+Jellyfin 还发布 `8920/tcp`、`7359/udp` 和 `1900/udp`，用于 HTTPS 及客户端发现等功能。qBittorrent 还发布 `6881/tcp` 和 `6881/udp`，用于 BitTorrent 连接。
 
-Compose 发布的端口默认可从主机网络访问。部署到公网前请配置防火墙或反向代理访问策略，并为各服务设置强密码；不要直接将 Aria2 RPC 端口暴露给不可信网络。
+端口映射格式为 `宿主机端口:容器端口`。例如 qBittorrent 当前配置为 `8081:8081`，并通过 `WEBUI_PORT=8081` 设置容器内 Web UI 端口。若要更改宿主机端口而不改容器端口，只需修改映射左侧；若更改容器端口，则需同时修改 `WEBUI_PORT` 和映射右侧。
+
+Compose 发布的端口默认可从主机网络访问。部署到公网前请配置防火墙或反向代理访问策略，并为各服务设置强密码。
 
 ## 环境要求
 
@@ -51,16 +52,17 @@ Compose 发布的端口默认可从主机网络访问。部署到公网前请配
 
    | 变量 | 说明 |
    | --- | --- |
-   | `ARIA2_SECRET` | Aria2 RPC 密钥 |
-   | `TRACKER_URL` | Aria2-Pro 使用的自定义 Tracker 列表 URL |
    | `SSD_MOVIE_PATH`、`SSD_TV_PATH`、`SSD_MUSIC_PATH`、`SSD_JAV_PATH` | SSD 上对应媒体目录的主机路径 |
    | `HDD_MOVIE_PATH`、`HDD_TV_PATH`、`HDD_ANIME_PATH` | HDD 上对应媒体目录的主机路径 |
    | `DOWNLOAD_PATH` | 下载目录的主机路径 |
    | `POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB` | PostgreSQL 初始化用户名、密码和数据库名 |
+   | `METATUBE_HTTP_PROXY`、`METATUBE_HTTPS_PROXY` | MetaTube 可选的 HTTP、HTTPS 代理地址；不使用代理时留空 |
 
    路径变量应使用 Docker 主机可访问的路径，并确保目录存在且容器具有读写权限。Windows Docker Desktop 用户还需确认 Docker 已获准访问对应磁盘。
 
-3. 部署前检查 `docker-compose.yml` 中 MetaTube 的 `command`：当前 DSN 含有 `******` 占位内容。请按 MetaTube 支持的 DSN 格式将其替换为与 `POSTGRES_USER`、`POSTGRES_PASSWORD` 和 `POSTGRES_DB` 一致的数据库连接信息，否则 MetaTube 可能无法连接数据库。PostgreSQL 通过共享卷中的 Unix socket 与 MetaTube 通信，不发布主机端口。
+3. 检查 `docker-compose.yml` 中 MetaTube 的 `command`：当前 DSN 含有 `******` 占位内容。启动前请将其替换为与 PostgreSQL 用户、密码和数据库名一致的连接信息，否则 MetaTube 可能无法连接数据库。PostgreSQL 通过共享卷中的 Unix socket 与 MetaTube 通信，不发布主机端口。
+
+FlareSolverr 默认使用宿主机端口 `8191`。如需修改，可在 `.env` 中设置 `PORT`；该变量只改变宿主机端口，容器内端口仍为 `8191`。qBittorrent 的 Web UI 端口在 Compose 文件中设置为 `8081`。
 
 ## 启动与维护
 
@@ -95,13 +97,13 @@ docker compose up -d jellyfin
 
 ## 数据与目录
 
-- Jellyfin、Seerr、Radarr、Sonarr、Prowlarr、Bazarr、Aria2-Pro、danmu-api、MetaTube 和 PostgreSQL 的配置或状态均通过 Compose 命名卷持久化。
+- Jellyfin、Radarr、Sonarr、Prowlarr、Bazarr、qBittorrent、danmu-api、MetaTube 和 PostgreSQL 的配置或状态通过 Compose 命名卷持久化。
 - 媒体库和下载目录通过 `.env` 中的主机路径绑定挂载到容器内路径。
 - 仓库仅包含 Compose 配置、环境变量示例、README 和 `.gitignore`；服务配置及数据库数据存放在 Docker 命名卷中，不会随克隆仓库一并恢复。迁移或升级前请备份相关命名卷及媒体数据。
 
 ## 媒体路径映射
 
-在 Jellyfin、Radarr、Sonarr、Bazarr 和下载客户端中配置目录时，使用下表中的**容器内路径**，并确保相关服务对同一媒体或下载目录使用一致的路径。
+在 Jellyfin、Radarr、Sonarr、Bazarr 和 qBittorrent 中配置目录时，使用下表中的**容器内路径**，并确保相关服务对同一媒体或下载目录使用一致的路径。
 
 | 主机目录变量 | 容器内路径 | 挂载到的服务 |
 | --- | --- | --- |
@@ -112,14 +114,14 @@ docker compose up -d jellyfin
 | `HDD_ANIME_PATH` | `/data/hdd/anime` | Jellyfin、Sonarr、Bazarr |
 | `HDD_TV_PATH` | `/data/hdd/tv` | Jellyfin、Sonarr、Bazarr |
 | `HDD_MOVIE_PATH` | `/data/hdd/movie` | Jellyfin、Radarr、Bazarr |
-| `DOWNLOAD_PATH` | `/downloads` | Aria2-Pro、Radarr、Sonarr |
+| `DOWNLOAD_PATH` | `/downloads` | qBittorrent、Radarr、Sonarr |
 
 ## 典型使用流程
 
-1. 在 Prowlarr 配置索引器，并将其连接到 Radarr 和 Sonarr。
-2. 在 Aria2-Pro 配置下载目录；Radarr、Sonarr 与下载服务应通过相同的容器路径访问下载文件。
+1. 在 Prowlarr 配置索引器，并将其连接到 Radarr 和 Sonarr；需要时配置 FlareSolverr。
+2. 在 qBittorrent 配置下载目录；Radarr、Sonarr 与下载服务应通过相同的容器路径访问下载文件。
 3. 在 Radarr 管理电影，在 Sonarr 管理电视剧或动画，并配置对应媒体库目录。
 4. 在 Bazarr 配置媒体路径和字幕服务。
-5. 在 Jellyfin 添加媒体库目录，并按需配置 Seerr 的请求流程、danmu-api 和 MetaTube 集成。
+5. 在 Jellyfin 添加媒体库目录，并按需配置 danmu-api 和 MetaTube 集成。
 
 服务之间的 API 地址、认证信息、索引器、下载客户端和媒体目录需要在各 Web 管理界面中配置；Compose 负责启动容器和挂载目录，不会自动完成这些应用内设置。
